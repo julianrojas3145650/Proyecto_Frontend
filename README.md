@@ -1,59 +1,129 @@
-# Frontend
+# Senavicola Frontend — Angular 20
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.6.
+Sistema de gestión avícola frontend, conectado al backend NestJS existente.
 
-## Development server
+## 🚀 Requisitos
 
-To start a local development server, run:
+- Node.js 20+
+- npm 10+
+- Backend NestJS corriendo en `http://localhost:3000`
 
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## 📦 Instalación
 
 ```bash
-ng generate component component-name
+npm install
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## ▶️ Ejecutar en desarrollo
 
 ```bash
-ng generate --help
+npm start
+# Abre http://localhost:4200
 ```
 
-## Building
-
-To build the project run:
+## 🏗️ Build producción
 
 ```bash
-ng build
+npm run build
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+---
 
-## Running unit tests
+## 🗂️ Estructura del Proyecto
 
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
+```
+src/app/
+├── core/
+│   ├── guards/
+│   │   └── auth.guard.ts          # authGuard + publicGuard
+│   ├── interceptors/
+│   │   └── auth.interceptor.ts    # Agrega Bearer token automáticamente
+│   ├── models/
+│   │   └── index.ts               # Todos los modelos TypeScript
+│   └── services/
+│       ├── auth.service.ts        # Login, logout, JWT
+│       ├── base-api.service.ts    # CRUD genérico base
+│       ├── api.services.ts        # Todos los servicios de la API
+│       └── toast.service.ts       # Notificaciones
+│
+├── shared/
+│   └── components/
+│       ├── layout/                # Header + Sidebar + RouterOutlet
+│       ├── toast-container/       # Notificaciones visuales
+│       ├── simple-crud/           # Componente CRUD genérico reutilizable
+│       └── forbidden/             # Página 403
+│
+└── features/
+    ├── auth/login/                # Pantalla bienvenida + login
+    ├── dashboard/                 # Inicio con gráficas y estadísticas
+    ├── flocks/                    # Lotes y galpones
+    ├── eggs/                      # Inventario de huevos
+    ├── supplies/                  # Insumos
+    ├── reports/                   # Reportes
+    └── config/
+        ├── config-home/           # Dashboard de configuración
+        ├── users/                 # CRUD usuarios + asignación de roles
+        ├── roles/                 # CRUD roles + asignación de permisos
+        ├── permissions/           # CRUD permisos
+        ├── breeds/                # Razas
+        ├── barns/                 # Galpones (config)
+        ├── egg-types/             # Tipos de huevo
+        ├── measurement-units/     # Unidades de medida
+        ├── supply-categories/     # Categorías de insumos
+        └── supply-actions/        # Acciones de insumos
 ```
 
-## Running end-to-end tests
+---
 
-For end-to-end (e2e) testing, run:
+## 🔐 Autenticación
 
-```bash
-ng e2e
+El flujo es:
+
+1. Usuario hace login en `/auth/login`
+2. Backend devuelve `{ access_token, user }`
+3. El token se guarda en `localStorage` con key `senavicola_token`
+4. El interceptor `auth.interceptor.ts` agrega automáticamente `Authorization: Bearer <token>` a todas las requests
+5. Si el backend responde `401`, se hace logout y redirige a login
+6. Si responde `403`, muestra "Acceso Denegado"
+
+---
+
+## 📡 Endpoints integrados
+
+Todos los endpoints del backend están implementados. Ver `src/app/core/services/api.services.ts`.
+
+### Auth
+- `POST /auth/login`
+- `GET /auth/profile`
+- `GET /auth/check`
+
+### CRUD completo
+- `/users`, `/roles`, `/permissions`
+- `/breeds`, `/barns`, `/flocks`
+- `/egg-types`, `/egg-inventory`
+- `/supplies`, `/supply-categories`, `/measurement-units`
+- `/supply-history`, `/supply-actions`
+- `/alimentacion`, `/reports`
+
+---
+
+## 🎨 Diseño
+
+- Paleta principal: `#39A900` (verde SENA)
+- Tipografía: Work Sans
+- Íconos: Font Awesome 6
+- Responsive: sidebar colapsable en móvil
+- Basado en el diseño HTML del archivo ZIP original
+
+---
+
+## ⚙️ Variables de entorno
+
+Edita `src/environments/environment.ts`:
+
+```ts
+export const environment = {
+  production: false,
+  apiUrl: 'http://localhost:3000'   // ← Cambia si tu backend está en otro puerto
+};
 ```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
