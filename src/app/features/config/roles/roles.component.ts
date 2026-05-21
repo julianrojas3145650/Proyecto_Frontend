@@ -40,15 +40,15 @@ import { Role, Permission } from '../../../core/models';
             <table class="data-table">
               <thead><tr><th>ID</th><th>Nombre</th><th>Descripción</th><th>Acciones</th></tr></thead>
               <tbody>
-                @for (role of filtered(); track role.id) {
+                @for (role of filtered(); track role.id_rol) {
                   <tr>
-                    <td>#{{ role.id }}</td>
+                    <td>#{{ role.id_rol }}</td>
                     <td><strong>{{ role.nombre }}</strong></td>
                     <td>{{ role.descripcion || '—' }}</td>
                     <td class="actions-cell">
                       <button class="btn-icon edit" (click)="editRole(role)"><i class="fas fa-edit"></i></button>
                       <button class="btn-icon view" title="Ver permisos" (click)="openPermModal(role)"><i class="fas fa-key"></i></button>
-                      <button class="btn-icon delete" (click)="deleteRole(role.id)"><i class="fas fa-trash"></i></button>
+                      <button class="btn-icon delete" (click)="deleteRole(role.id_rol)"><i class="fas fa-trash"></i></button>
                     </td>
                   </tr>
                 }
@@ -190,7 +190,7 @@ export class RolesComponent implements OnInit {
   openPermModal(role: Role): void {
     this.selectedRole.set(role);
     this.selectedPermId = '';
-    this.permissionsService.getPermissionsByRole(role.id).subscribe((p) => this.rolePermissions.set(p));
+    this.permissionsService.getPermissionsByRole(role.id_rol).subscribe((p) => this.rolePermissions.set(p));
     this.showPermModal.set(true);
   }
 
@@ -200,7 +200,7 @@ export class RolesComponent implements OnInit {
     if (this.roleForm.invalid) { this.roleForm.markAllAsTouched(); return; }
     const data = this.roleForm.value as Partial<Role>;
     const editing = this.editing();
-    const req = editing ? this.rolesService.update(editing.id, data) : this.rolesService.create(data);
+    const req = editing ? this.rolesService.update(editing.id_rol, data) : this.rolesService.create(data);
     req.subscribe({
       next: () => { this.toast.success('Rol guardado'); this.closeModals(); this.loadRoles(); },
       error: () => this.toast.error('Error al guardar el rol'),
@@ -218,7 +218,7 @@ export class RolesComponent implements OnInit {
   assignPermission(): void {
     const role = this.selectedRole();
     if (!role || !this.selectedPermId) return;
-    this.permissionsService.assignPermission({ id_rol: role.id, id_permiso: +this.selectedPermId }).subscribe({
+    this.permissionsService.assignPermission({ id_rol: role.id_rol, id_permiso: +this.selectedPermId }).subscribe({
       next: () => { this.toast.success('Permiso asignado'); this.openPermModal(role); },
       error: () => this.toast.error('Error al asignar permiso'),
     });
@@ -227,7 +227,7 @@ export class RolesComponent implements OnInit {
   removePermission(permId: number): void {
     const role = this.selectedRole();
     if (!role) return;
-    this.permissionsService.removePermission({ id_rol: role.id, id_permiso: permId }).subscribe({
+    this.permissionsService.removePermission({ id_rol: role.id_rol, id_permiso: permId }).subscribe({
       next: () => { this.toast.success('Permiso removido'); this.rolePermissions.update((p) => p.filter((x) => x.id !== permId)); },
       error: () => this.toast.error('Error al remover permiso'),
     });

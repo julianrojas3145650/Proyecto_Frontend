@@ -13,6 +13,7 @@ import { BreedsService } from '../../../core/services/api.services';
       subtitle="Gestiona las razas disponibles en el sistema."
       entityName="Raza"
       icon="fa-dna"
+      idField="id_raza"
       [fields]="fields"
     />
   `,
@@ -21,6 +22,6 @@ export class BreedsComponent {
   service = inject(BreedsService);
   fields: CrudField[] = [
     { key: 'nombre', label: 'Nombre', type: 'text', placeholder: 'Ej: Leghorn', required: true },
-    { key: 'descripcion', label: 'Descripción', type: 'textarea', placeholder: 'Descripción...', required: false },
+    { key: 'descripcion', label: 'Descripción', type: 'textarea', placeholder: 'Descripción...', required: true },
   ];
 }

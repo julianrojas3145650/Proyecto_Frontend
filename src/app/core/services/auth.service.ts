@@ -15,18 +15,32 @@ export class AuthService {
 
   constructor(private http: HttpClient, private router: Router) {}
 
-  login(credentials: LoginRequest): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>(`${this.apiUrl}/auth/login`, credentials).pipe(
+  login(credentials: LoginRequest): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/auth/login`, credentials).pipe(
       tap((response) => {
         localStorage.setItem(this.TOKEN_KEY, response.access_token);
-        localStorage.setItem(this.USER_KEY, JSON.stringify(response.user));
-        this.currentUser.set(response.user as unknown as AuthProfile);
+        const user = response.usuario || response.user;
+        localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+        this.currentUser.set(user as AuthProfile);
       }),
       catchError((error) => {
         const msg = error.error?.message || 'Credenciales inválidas';
-        return throwError(() => new Error(msg));
+        return throwError(() => error);
       })
     );
+  }
+
+  loginAsGuest(): void {
+    const guest: AuthProfile = {
+      id_usuario: 'guest',
+      nombre: 'Invitado',
+      numero_documento: '00000000',
+      roles: [],
+      permisos: [],
+    };
+    localStorage.setItem(this.USER_KEY, JSON.stringify(guest));
+    this.currentUser.set(guest);
+    this.router.navigate(['/dashboard']);
   }
 
   getProfile(): Observable<AuthProfile> {

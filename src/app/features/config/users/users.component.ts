@@ -52,16 +52,18 @@ import { User, Role } from '../../../core/models';
                 <tr><th>ID</th><th>Nombre</th><th>Documento</th><th>Email</th><th>Roles</th><th>Estado</th><th>Acciones</th></tr>
               </thead>
               <tbody>
-                @for (user of filtered(); track user.id) {
+                @for (user of filtered(); track user.id_usuario) {
                   <tr>
-                    <td>#{{ user.id }}</td>
+                    <td>#{{ user.id_usuario.substring(0, 8) }}…</td>
                     <td><strong>{{ user.nombre }}</strong></td>
                     <td>{{ user.numero_documento }}</td>
                     <td>{{ user.email || '—' }}</td>
                     <td>
-                      @for (role of (user.roles || []); track role.id) {
-                        <span class="badge active" style="margin-right:0.4rem">{{ role.nombre }}</span>
-                      }
+                      <div class="role-chips">
+                        @for (role of (user.roles || []); track role.id_rol) {
+                          <span class="badge active" style="margin-right:0.4rem">{{ role.nombre }}</span>
+                        }
+                      </div>
                       @if (!(user.roles?.length)) { <span class="badge inactive">Sin rol</span> }
                     </td>
                     <td>
@@ -70,10 +72,10 @@ import { User, Role } from '../../../core/models';
                       </span>
                     </td>
                     <td class="actions-cell">
-                      <button class="btn-icon edit" title="Editar" (click)="editUser(user)"><i class="fas fa-edit"></i></button>
-                      <button class="btn-icon view" title="Asignar rol" (click)="openRoleModal(user)"><i class="fas fa-user-tag"></i></button>
-                      <button class="btn-icon delete" title="Eliminar" (click)="deleteUser(user.id)"><i class="fas fa-trash"></i></button>
-                    </td>
+                        <button class="btn-icon edit" title="Editar" (click)="editUser(user)"><i class="fas fa-edit"></i></button>
+                        <button class="btn-icon assign" title="Asignar Rol" (click)="openRoleModal(user)"><i class="fas fa-user-tag"></i></button>
+                        <button class="btn-icon delete" title="Eliminar" (click)="deleteUser(user.id_usuario)"><i class="fas fa-trash"></i></button>
+                      </td>
                   </tr>
                 }
               </tbody>
@@ -94,13 +96,17 @@ import { User, Role } from '../../../core/models';
           <div class="modal-body">
             <form [formGroup]="userForm">
               <div class="form-group">
-                <label><i class="fas fa-user"></i> Nombre Completo</label>
-                <input type="text" formControlName="nombre" placeholder="Nombre completo" />
+                <label><i class="fas fa-user"></i> Nombre</label>
+                <input type="text" formControlName="nombre" placeholder="Nombre" />
+              </div>
+              <div class="form-group">
+                <label><i class="fas fa-user"></i> Apellido</label>
+                <input type="text" formControlName="apellido" placeholder="Apellido" />
               </div>
               <div class="form-row">
                 <div class="form-group">
-                  <label><i class="fas fa-id-card"></i> Número de Documento</label>
-                  <input type="text" formControlName="numero_documento" placeholder="Número de documento" />
+                  <label><i class="fas fa-id-card"></i> Documento</label>
+                  <input type="text" formControlName="documento" placeholder="Número de documento" />
                 </div>
                 <div class="form-group">
                   <label><i class="fas fa-envelope"></i> Email</label>
@@ -110,7 +116,7 @@ import { User, Role } from '../../../core/models';
               @if (!editing()) {
                 <div class="form-group">
                   <label><i class="fas fa-lock"></i> Contraseña</label>
-                  <input type="password" formControlName="contrasena" placeholder="Contraseña" />
+                  <input type="password" formControlName="password" placeholder="Contraseña" />
                 </div>
               }
             </form>
@@ -137,10 +143,10 @@ import { User, Role } from '../../../core/models';
             <div class="form-group">
               <label><i class="fas fa-user-tag"></i> Roles Actuales</label>
               <div class="role-chips">
-                @for (role of (selectedUser()?.roles || []); track role.id) {
+                @for (role of (selectedUser()?.roles || []); track role.id_rol) {
                   <span class="badge active">
                     {{ role.nombre }}
-                    <button class="chip-remove" (click)="removeRole(role.id)"><i class="fas fa-times"></i></button>
+                    <button class="chip-remove" (click)="removeRole(role.id_rol)"><i class="fas fa-times"></i></button>
                   </span>
                 }
                 @if (!(selectedUser()?.roles?.length)) {
@@ -152,8 +158,8 @@ import { User, Role } from '../../../core/models';
               <label><i class="fas fa-plus-circle"></i> Asignar Nuevo Rol</label>
               <select [(ngModel)]="selectedRoleId">
                 <option value="">Seleccionar rol</option>
-                @for (role of roles(); track role.id) {
-                  <option [value]="role.id">{{ role.nombre }}</option>
+                @for (role of roles(); track role.id_rol) {
+                  <option [value]="role.id_rol">{{ role.nombre }}</option>
                 }
               </select>
             </div>
@@ -201,9 +207,10 @@ export class UsersComponent implements OnInit {
 
   userForm = this.fb.group({
     nombre: ['', Validators.required],
-    numero_documento: ['', Validators.required],
-    email: ['', Validators.email],
-    contrasena: [''],
+    apellido: ['', Validators.required],
+    documento: ['', Validators.required],
+    email: ['', [Validators.required, Validators.email]],
+    password: [''],
   });
 
   ngOnInit(): void {
@@ -220,14 +227,14 @@ export class UsersComponent implements OnInit {
 
   filter(): void {
     const q = this.searchQuery.toLowerCase();
-    this.filtered.set(this.users().filter((u) => `${u.nombre} ${u.numero_documento} ${u.email}`.toLowerCase().includes(q)));
+    this.filtered.set(this.users().filter((u) => `${u.nombre} ${u.documento} ${u.email}`.toLowerCase().includes(q)));
   }
 
   openModal(): void { this.editing.set(null); this.userForm.reset(); this.showModal.set(true); }
 
   editUser(user: User): void {
     this.editing.set(user);
-    this.userForm.patchValue({ nombre: user.nombre, numero_documento: user.numero_documento, email: user.email || '' });
+    this.userForm.patchValue({ nombre: user.nombre, apellido: (user as any).apellido || '', documento: user.documento || '', email: user.email || '' });
     this.showModal.set(true);
   }
 
@@ -238,17 +245,19 @@ export class UsersComponent implements OnInit {
   save(): void {
     if (this.userForm.invalid) { this.userForm.markAllAsTouched(); return; }
     this.saving.set(true);
-    const data = this.userForm.value as Partial<User>;
+    const formValue = { ...this.userForm.value };
+    // Remove empty password on edit
+    if (!formValue.password) delete (formValue as any).password;
     const editing = this.editing();
-    const req = editing ? this.usersService.update(editing.id, data) : this.usersService.create(data);
+    const req = editing ? this.usersService.update(editing.id_usuario, formValue as Partial<User>) : this.usersService.create(formValue as Partial<User>);
     req.subscribe({
       next: () => { this.toast.success(editing ? 'Usuario actualizado' : 'Usuario creado'); this.closeModals(); this.loadUsers(); },
-      error: () => { this.toast.error('Error al guardar el usuario'); this.saving.set(false); },
+      error: (err) => { const msg = err?.error?.message; this.toast.error(msg ? `Error: ${Array.isArray(msg) ? msg.join(', ') : msg}` : 'Error al guardar el usuario'); this.saving.set(false); },
       complete: () => this.saving.set(false),
     });
   }
 
-  deleteUser(id: number): void {
+  deleteUser(id: string): void {
     if (!confirm('¿Eliminar este usuario?')) return;
     this.usersService.delete(id).subscribe({
       next: () => { this.toast.success('Usuario eliminado'); this.loadUsers(); },
@@ -259,7 +268,7 @@ export class UsersComponent implements OnInit {
   assignRole(): void {
     const user = this.selectedUser();
     if (!user || !this.selectedRoleId) return;
-    this.rolesService.assignRole({ id_usuario: user.id, id_rol: +this.selectedRoleId }).subscribe({
+    this.rolesService.assignRole({ id_usuario: user.id_usuario, id_rol: +this.selectedRoleId }).subscribe({
       next: () => { this.toast.success('Rol asignado exitosamente'); this.loadUsers(); this.closeModals(); },
       error: () => this.toast.error('Error al asignar rol'),
     });
@@ -268,9 +277,9 @@ export class UsersComponent implements OnInit {
   removeRole(roleId: number): void {
     const user = this.selectedUser();
     if (!user) return;
-    this.rolesService.removeRole({ id_usuario: user.id, id_rol: roleId }).subscribe({
+    this.rolesService.removeRole({ id_usuario: user.id_usuario, id_rol: roleId }).subscribe({
       next: () => { this.toast.success('Rol removido'); this.loadUsers();
-        const updated = { ...user, roles: (user.roles || []).filter((r) => r.id !== roleId) };
+        const updated = { ...user, roles: (user.roles || []).filter((r) => r.id_rol !== roleId) };
         this.selectedUser.set(updated as User);
       },
       error: () => this.toast.error('Error al remover rol'),

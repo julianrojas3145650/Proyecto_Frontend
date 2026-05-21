@@ -13,6 +13,7 @@ import { EggTypesService } from '../../../core/services/api.services';
       subtitle="Gestiona la clasificación de tipos de huevo."
       entityName="Tipo de Huevo"
       icon="fa-egg"
+      idField="id_tipo"
       [fields]="fields"
     />
   `,
@@ -20,7 +21,8 @@ import { EggTypesService } from '../../../core/services/api.services';
 export class EggTypesComponent {
   service = inject(EggTypesService);
   fields: CrudField[] = [
-    { key: 'nombre', label: 'Nombre', type: 'text', placeholder: 'Ej: JUMBO', required: true },
-    { key: 'descripcion', label: 'Descripción', type: 'textarea', placeholder: 'Descripción...', required: false },
+    { key: 'tipo', label: 'Tipo', type: 'text', placeholder: 'Ej: JUMBO', required: true },
+    { key: 'peso_min', label: 'Peso Mínimo (g)', type: 'number', placeholder: 'Ej: 60', required: true },
+    { key: 'peso_max', label: 'Peso Máximo (g)', type: 'number', placeholder: 'Ej: 70', required: true },
   ];
 }

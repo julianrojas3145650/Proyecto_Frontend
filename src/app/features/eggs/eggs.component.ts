@@ -1,9 +1,9 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
-import { EggInventoryService, EggTypesService, FlocksService } from '../../core/services/api.services';
+import { EggInventoryService, EggTypesService, FlocksService, BarnsService } from '../../core/services/api.services';
 import { ToastService } from '../../core/services/toast.service';
-import { EggInventory, EggType, Flock } from '../../core/models';
+import { EggInventory, EggType, Flock, Barn } from '../../core/models';
 
 @Component({
   selector: 'app-eggs',
@@ -11,150 +11,298 @@ import { EggInventory, EggType, Flock } from '../../core/models';
   imports: [CommonModule, ReactiveFormsModule, FormsModule],
   template: `
     <div class="eggs-page">
-      <div class="module-header">
-        <div class="module-header-left">
-          <div class="module-icon"><i class="fas fa-egg"></i></div>
+      <!-- Header del Módulo -->
+      <div class="header_modulo">
+        <div class="header_modulo_izq">
+          <i class="fas fa-egg icono_modulo"></i>
           <div>
-            <h2>Gestión de Huevos</h2>
-            <p>Administrar y clasificar huevos de manera eficiente.</p>
+            <h2 class="titulo_modulo">Gestión de Huevos</h2>
+            <p class="subtitulo_modulo">Administrar y clasificar huevos de manera eficiente.</p>
           </div>
-        </div>
-        <div class="module-header-right">
-          <button class="btn-green" (click)="openModal('production')">
-            <i class="fas fa-plus"></i> Registrar Producción
-          </button>
-          <button class="btn-outline" (click)="openModal('damaged')">
-            <i class="fas fa-times"></i> Registrar Dañados
-          </button>
         </div>
       </div>
 
-      <!-- Stats -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-icon blue"><i class="fas fa-egg"></i></div>
-          <div class="stat-info">
-            <div class="stat-label">Total Hoy</div>
-            <div class="stat-value">{{ totalToday() }}</div>
-          </div>
+      <!-- Cards de Estadísticas -->
+      <div class="contenedor_cards_huevos">
+        <div class="card_stat_huevo">
+          <p class="card_label_huevo">Total Hoy</p>
+          <h3 class="card_valor_huevo card_azul">{{ totalToday() }}</h3>
         </div>
-        @for (type of eggTypes().slice(0, 4); track type.id) {
-          <div class="stat-card">
-            <div class="stat-icon {{ typeColors[$index % typeColors.length] }}"><i class="fas fa-egg"></i></div>
-            <div class="stat-info">
-              <div class="stat-label">{{ type.nombre }}</div>
-              <div class="stat-value">{{ getCountByType(type.id) }}</div>
-            </div>
+        @for (type of eggTypes(); track type.id_tipo) {
+          <div class="card_stat_huevo">
+            <p class="card_label_huevo">{{ type.tipo }}</p>
+            <h3 class="card_valor_huevo" [class]="typeColorClass($index)">{{ getCountByType(type.id_tipo) }}</h3>
           </div>
         }
       </div>
 
-      <!-- Inventory Table -->
-      <div class="table-container">
-        <div class="table-header">
-          <h3>Inventario de Huevos</h3>
-          <div class="table-actions">
-            <div class="search-bar">
-              <i class="fas fa-search"></i>
-              <input type="text" placeholder="Buscar..." [(ngModel)]="searchQuery" (input)="filterInventory()" />
-            </div>
+      <!-- Sección Clasificar Huevos -->
+      <div class="seccion_clasificar">
+        <div class="clasificar_header">
+          <i class="fas fa-balance-scale"></i>
+          <div>
+            <h3 class="clasificar_titulo">Clasificar Huevos</h3>
+            <p class="clasificar_subtitulo">Ingrese la cantidad de huevos para obtener su clasificación</p>
           </div>
         </div>
 
-        @if (loading()) {
-          <div class="loading-container"><div class="spinner"></div></div>
-        } @else if (filtered().length === 0) {
-          <div class="empty-state">
-            <i class="fas fa-egg"></i>
-            <h3>No hay registros de huevos</h3>
-            <p>Registra la primera producción haciendo clic en "Registrar Producción"</p>
+        <!-- Tabs de Clasificación -->
+        <div class="tabs_clasificacion">
+          <button class="tab_clasificacion_btn" [class.activo]="classifTab() === 'manual'" (click)="classifTab.set('manual')">
+            CLASIFICACIÓN MANUAL
+          </button>
+          <button class="tab_clasificacion_btn" [class.activo]="classifTab() === 'automatica'" (click)="classifTab.set('automatica')">
+            CLASIFICACIÓN AUTOMÁTICA
+          </button>
+        </div>
+
+        @if (classifTab() === 'manual') {
+          <!-- Categorías Info -->
+          <div class="categorias_info">
+            <div class="categoria_titulo_seccion">
+              <i class="fas fa-info-circle"></i>
+              <span>Categoría de clasificación</span>
+            </div>
+            <div class="categorias_grid">
+              <div class="categoria_card morado"><h4>Jumbo</h4><p>&gt; 73 gr</p></div>
+              <div class="categoria_card verde"><h4>AAA</h4><p>63-73 gr</p></div>
+              <div class="categoria_card verde_claro"><h4>AA</h4><p>53-63 gr</p></div>
+              <div class="categoria_card amarillo"><h4>A</h4><p>43-53 gr</p></div>
+              <div class="categoria_card naranja"><h4>B</h4><p>33-43 gr</p></div>
+              <div class="categoria_card rojo"><h4>C</h4><p>&lt; 33 gr</p></div>
+            </div>
           </div>
-        } @else {
-          <div class="table-responsive">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>ID</th><th>Tipo</th><th>Cantidad</th><th>Lote</th><th>Fecha</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (item of filtered(); track item.id) {
-                  <tr>
-                    <td>#{{ item.id }}</td>
-                    <td><span class="badge active">{{ item.tipo_huevo?.nombre || '—' }}</span></td>
-                    <td><strong>{{ item.cantidad }}</strong></td>
-                    <td>{{ item.lote ? 'Lote #' + item.lote.id : '—' }}</td>
-                    <td>{{ item.fecha ? (item.fecha | date:'dd/MM/yyyy') : '—' }}</td>
-                  </tr>
+
+          <!-- Formulario de Clasificación -->
+          <form [formGroup]="classifyForm" class="form_clasificar" (ngSubmit)="saveProduction()">
+            <div class="form_row">
+              <div class="form_group">
+                <label>Seleccionar Lote</label>
+                <select formControlName="loteId">
+                  <option value="">Seleccionar</option>
+                  @for (flock of flocks(); track flock.id_lote) {
+                    <option [value]="flock.id_lote">{{ flock.nombre }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form_group">
+                <label>Seleccionar Tipo de Huevo</label>
+                <select formControlName="tipoHuevoId">
+                  <option value="">Seleccionar</option>
+                  @for (type of eggTypes(); track type.id_tipo) {
+                    <option [value]="type.id_tipo">{{ type.tipo }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+            <div class="form_row">
+              <div class="form_group">
+                <label>Cantidad de huevos</label>
+                <input type="number" formControlName="cantidad" placeholder="Ej: 30" min="1" />
+              </div>
+              <div class="form_group_btn">
+                <button type="submit" class="btn_clasificar" [disabled]="saving()">
+                  <i class="fas fa-search"></i> Clasificar
+                </button>
+              </div>
+            </div>
+          </form>
+        }
+
+        @if (classifTab() === 'automatica') {
+          <div class="texto_placeholder">
+            <i class="fas fa-video-slash" style="font-size:4rem;margin-bottom:1rem;display:block;color:var(--gray-dark)"></i>
+            Clasificación automática por cámara (próximamente)
+          </div>
+        }
+      </div>
+
+      <!-- Tabs de Inventario -->
+      <div class="contenedor_tabs">
+        <div class="tabs_header">
+          <button class="tab_btn" [class.activo]="activeTab() === 'inventario'" (click)="activeTab.set('inventario')">Inventario Disponible</button>
+          <button class="tab_btn" [class.activo]="activeTab() === 'danados'" (click)="activeTab.set('danados')">Huevos Dañados</button>
+          <button class="tab_btn" [class.activo]="activeTab() === 'historial'" (click)="activeTab.set('historial')">Historial</button>
+        </div>
+
+        <div class="tabs_content">
+          @if (activeTab() === 'inventario') {
+            <div class="controles_tabla">
+              <select class="select_filtro" [(ngModel)]="filterType" (change)="filterInventory()">
+                <option value="todos">Todos los tipos</option>
+                @for (type of eggTypes(); track type.id_tipo) {
+                  <option [value]="type.tipo">{{ type.tipo }}</option>
                 }
-              </tbody>
-            </table>
-          </div>
-        }
+              </select>
+            </div>
+            @if (loading()) {
+              <div class="loading-container"><div class="spinner"></div></div>
+            } @else if (filtered().length === 0) {
+              <div class="empty-state">
+                <i class="fas fa-egg"></i>
+                <h3>No hay registros de huevos</h3>
+                <p>Clasifica huevos usando el formulario de arriba</p>
+              </div>
+            } @else {
+              <div class="tabla_contenedor">
+                <table class="tabla">
+                  <thead>
+                    <tr><th>Tipo</th><th>Cantidad</th><th>Lote</th><th>Acciones</th></tr>
+                  </thead>
+                  <tbody>
+                    @for (item of filtered(); track item.id_inventario_huevo) {
+                      <tr>
+                        <td><span class="badge_estado disponible">{{ item.tipo_huevo?.tipo || '—' }}</span></td>
+                        <td><strong>{{ item.cantidad }}</strong></td>
+                        <td>{{ item.lote?.nombre || '—' }}</td>
+                        <td>
+                          <button class="btn_accion btn_editar" (click)="openDamagedModal(item)">
+                            <i class="fas fa-exclamation-circle"></i> Dañados
+                          </button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          }
+
+          @if (activeTab() === 'danados') {
+            <div class="texto_placeholder">Huevos dañados (próximamente)</div>
+          }
+          @if (activeTab() === 'historial') {
+            <div class="texto_placeholder">Historial de clasificación (próximamente)</div>
+          }
+        </div>
       </div>
     </div>
 
-    <!-- Modal Producción -->
-    @if (showProductionModal()) {
-      <div class="modal-overlay" (click)="closeModals()">
-        <div class="modal-card" (click)="$event.stopPropagation()">
-          <div class="modal-header">
-            <h3><i class="fas fa-egg"></i> {{ modalType() === 'production' ? 'Registrar Producción' : 'Registrar Huevos Dañados' }}</h3>
-            <button class="btn-close" (click)="closeModals()"><i class="fas fa-times"></i></button>
+    <!-- Modal Dañados -->
+    @if (showDamagedModal()) {
+      <div class="modal activo" (click)="showDamagedModal.set(false)">
+        <div class="modal_contenido" (click)="$event.stopPropagation()">
+          <div class="modal_header">
+            <div class="modal_header_icon"><i class="fas fa-exclamation-circle"></i></div>
+            <h3 class="modal_titulo">Actualizar Huevos Dañados</h3>
           </div>
-          <div class="modal-body">
-            <form [formGroup]="eggForm">
-              <div class="form-row">
-                <div class="form-group">
-                  <label><i class="fas fa-egg"></i> Tipo de Huevo</label>
-                  <select formControlName="id_tipo_huevo">
-                    <option value="">Seleccionar tipo</option>
-                    @for (type of eggTypes(); track type.id) {
-                      <option [value]="type.id">{{ type.nombre }}</option>
-                    }
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label><i class="fas fa-sort-numeric-up"></i> Cantidad</label>
-                  <input type="number" formControlName="cantidad" placeholder="Ej: 100" min="1" />
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label><i class="fas fa-layer-group"></i> Lote</label>
-                  <select formControlName="id_lote">
-                    <option value="">Seleccionar lote</option>
-                    @for (flock of flocks(); track flock.id) {
-                      <option [value]="flock.id">Lote #{{ flock.id }}</option>
-                    }
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label><i class="fas fa-calendar"></i> Fecha</label>
-                  <input type="date" formControlName="fecha" />
-                </div>
-              </div>
-            </form>
-          </div>
-          <div class="modal-footer">
-            <button class="btn-outline" (click)="closeModals()">Cancelar</button>
-            <button class="btn-green" (click)="save()" [disabled]="saving()">
-              <i class="fas fa-save"></i>
-              {{ modalType() === 'production' ? 'Guardar Producción' : 'Guardar Dañados' }}
-            </button>
-          </div>
+          <form [formGroup]="damagedForm" class="modal_form" (ngSubmit)="saveDamaged()">
+            <div class="form_group">
+              <label>Cantidad Disponible</label>
+              <input type="number" [value]="selectedInventory()?.cantidad || 0" readonly />
+            </div>
+            <div class="form_group">
+              <label>Cantidad Dañada</label>
+              <input type="number" formControlName="cantidad" placeholder="Ej: 5" min="1" />
+            </div>
+            <div class="form_group">
+              <label>Razón</label>
+              <input type="text" formControlName="razon" placeholder="Ej: Rotos en transporte" />
+            </div>
+            <div class="modal_botones">
+              <button type="button" class="btn_cancelar" (click)="showDamagedModal.set(false)">Cancelar</button>
+              <button type="submit" class="btn_registrar" [disabled]="saving()">Actualizar</button>
+            </div>
+          </form>
         </div>
       </div>
     }
   `,
+  styleUrls: [],
   styles: [`
-    .table-responsive { overflow-x: auto; }
-    .data-table { width: 100%; border-collapse: collapse;
-      th { padding: 1.2rem 1.5rem; background: var(--gray-light); font-size: 1.2rem; font-weight: 600; text-transform: uppercase; color: var(--gray-dark); text-align: left; }
-      td { padding: 1.2rem 1.5rem; border-top: 1px solid var(--gray-medium); font-size: 1.4rem; }
-      tr:hover td { background: rgba(57,169,0,0.03); }
-    }
-    .btn-close { background: none; border: none; font-size: 2rem; color: var(--gray-dark); cursor: pointer; padding: 0.3rem; }
+    /* Cards Huevos */
+    .contenedor_cards_huevos { display: flex; gap: 1.5rem; margin-bottom: 3rem; flex-wrap: wrap; }
+    .card_stat_huevo { background: white; padding: 2rem 2.5rem; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; flex: 1; min-width: 120px; transition: all 0.3s ease; }
+    .card_stat_huevo:hover { transform: translateY(-5px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .card_label_huevo { font-size: 1.3rem; color: #666; margin-bottom: 0.5rem; font-weight: 600; }
+    .card_valor_huevo { font-size: 3rem; font-weight: 700; }
+    .card_azul { color: #2196f3; }
+    .card_morado { color: #9c27b0; }
+    .card_verde { color: #4caf50; }
+    .card_verde_claro { color: #66bb6a; }
+    .card_amarillo { color: #ffc107; }
+    .card_naranja { color: #ff9800; }
+    .card_rojo { color: #f44336; }
+
+    /* Clasificar */
+    .seccion_clasificar { background: white; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 2.5rem; margin-bottom: 3rem; }
+    .clasificar_header { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem; }
+    .clasificar_header i { font-size: 3rem; color: var(--primary-green); }
+    .clasificar_titulo { font-size: 2rem; font-weight: 700; }
+    .clasificar_subtitulo { font-size: 1.4rem; color: #666; }
+
+    /* Tabs clasificación */
+    .tabs_clasificacion { display: flex; margin-bottom: 2rem; border-bottom: 2px solid #e0e0e0; }
+    .tab_clasificacion_btn { flex: 1; padding: 1.5rem; background: transparent; border: none; font-size: 1.4rem; font-weight: 700; color: #666; cursor: pointer; transition: all 0.3s; position: relative; text-transform: uppercase; letter-spacing: 1px; }
+    .tab_clasificacion_btn.activo { color: var(--primary-green); }
+    .tab_clasificacion_btn.activo::after { content: ""; position: absolute; bottom: -2px; left: 0; right: 0; height: 3px; background: var(--primary-green); }
+
+    /* Categorías */
+    .categorias_info { margin-bottom: 2rem; }
+    .categoria_titulo_seccion { display: flex; align-items: center; gap: 0.8rem; font-size: 1.4rem; font-weight: 600; color: #666; margin-bottom: 1.5rem; }
+    .categorias_grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1rem; }
+    .categoria_card { padding: 1.5rem; border-radius: 10px; text-align: center; color: white; }
+    .categoria_card h4 { font-size: 1.6rem; font-weight: 700; }
+    .categoria_card p { font-size: 1.2rem; margin-top: 0.3rem; }
+    .categoria_card.morado { background: #9c27b0; }
+    .categoria_card.verde { background: #4caf50; }
+    .categoria_card.verde_claro { background: #66bb6a; }
+    .categoria_card.amarillo { background: #ffc107; color: #333; }
+    .categoria_card.naranja { background: #ff9800; }
+    .categoria_card.rojo { background: #f44336; }
+
+    /* Form clasificar */
+    .form_clasificar { display: flex; flex-direction: column; gap: 1.5rem; }
+    .form_row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .form_group { display: flex; flex-direction: column; gap: 0.8rem; }
+    .form_group label { font-size: 1.4rem; font-weight: 600; color: #333; }
+    .form_group input, .form_group select { padding: 1.2rem; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1.5rem; font-family: 'Work Sans', sans-serif; transition: all 0.3s; }
+    .form_group input:focus, .form_group select:focus { outline: none; border-color: var(--primary-green); }
+    .form_group_btn { display: flex; align-items: flex-end; }
+    .btn_clasificar { background: var(--primary-green); color: white; border: none; padding: 1.2rem 2.5rem; border-radius: 8px; font-size: 1.5rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.8rem; transition: all 0.3s; }
+    .btn_clasificar:hover { background: #2d8600; }
+    .btn_clasificar:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* Tabs inventario */
+    .contenedor_tabs { background: white; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden; }
+    .tabs_header { display: flex; background: #f5f5f5; border-bottom: 2px solid #e0e0e0; }
+    .tab_btn { flex: 1; padding: 1.8rem 2rem; background: transparent; border: none; font-size: 1.5rem; font-weight: 600; color: #666; cursor: pointer; transition: all 0.3s; position: relative; }
+    .tab_btn:hover { background: rgba(57,169,0,0.1); color: var(--primary-green); }
+    .tab_btn.activo { background: white; color: var(--primary-green); }
+    .tab_btn.activo::after { content: ""; position: absolute; bottom: -2px; left: 0; right: 0; height: 3px; background: var(--primary-green); }
+    .tabs_content { padding: 3rem; }
+
+    /* Tabla */
+    .controles_tabla { display: flex; justify-content: flex-start; margin-bottom: 2rem; }
+    .select_filtro { padding: 1.2rem 3rem 1.2rem 1.5rem; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1.5rem; background: white; cursor: pointer; }
+    .tabla_contenedor { overflow-x: auto; }
+    .tabla { width: 100%; border-collapse: collapse; }
+    .tabla thead { background: #f5f5f5; }
+    .tabla th { padding: 1.5rem; text-align: left; font-size: 1.4rem; font-weight: 700; color: #333; border-bottom: 2px solid #e0e0e0; }
+    .tabla td { padding: 1.5rem; font-size: 1.4rem; color: #333; border-bottom: 1px solid #e0e0e0; }
+    .tabla tbody tr { transition: background 0.2s; }
+    .tabla tbody tr:hover { background: rgba(57,169,0,0.05); }
+    .badge_estado { padding: 0.6rem 1.2rem; border-radius: 20px; font-size: 1.3rem; font-weight: 600; display: inline-block; }
+    .badge_estado.disponible { background: #e8f5e9; color: #2e7d32; }
+    .btn_accion { padding: 0.8rem 1.5rem; border: none; border-radius: 6px; font-size: 1.3rem; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+    .btn_editar { background: #2196f3; color: white; }
+    .btn_editar:hover { background: #1976d2; }
+    .texto_placeholder { text-align: center; padding: 5rem; font-size: 1.8rem; color: #666; }
+
+    /* Modal */
+    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+    .modal_contenido { background: white; border-radius: 15px; width: 90%; max-width: 500px; box-shadow: 0 10px 20px rgba(0,0,0,0.15); animation: modalSlideIn 0.3s ease; }
+    @keyframes modalSlideIn { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal_header { background: var(--primary-green); color: white; padding: 2rem; border-radius: 15px 15px 0 0; display: flex; align-items: center; gap: 1.5rem; }
+    .modal_header_icon { width: 50px; height: 50px; background: rgba(255,255,255,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 2.4rem; }
+    .modal_titulo { font-size: 2rem; font-weight: 700; }
+    .modal_form { padding: 2.5rem; }
+    .modal_botones { display: flex; gap: 1.5rem; margin-top: 2.5rem; }
+    .btn_cancelar { flex: 1; padding: 1.2rem 2rem; background: #e0e0e0; color: #333; border: none; border-radius: 8px; font-size: 1.5rem; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+    .btn_cancelar:hover { background: #bdbdbd; }
+    .btn_registrar { flex: 1; padding: 1.2rem 2rem; background: var(--primary-green); color: white; border: none; border-radius: 8px; font-size: 1.5rem; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+    .btn_registrar:hover { background: #2d8600; }
+    .btn_registrar:disabled { opacity: 0.6; cursor: not-allowed; }
   `],
 })
 export class EggsComponent implements OnInit {
@@ -169,24 +317,37 @@ export class EggsComponent implements OnInit {
   filtered = signal<EggInventory[]>([]);
   eggTypes = signal<EggType[]>([]);
   flocks = signal<Flock[]>([]);
-  searchQuery = '';
-  showProductionModal = signal(false);
-  modalType = signal<'production' | 'damaged'>('production');
+  activeTab = signal<'inventario' | 'danados' | 'historial'>('inventario');
+  classifTab = signal<'manual' | 'automatica'>('manual');
+  filterType = 'todos';
   saving = signal(false);
   totalToday = signal(0);
-  typeColors = ['blue', 'purple', 'orange', 'green', 'cyan', 'pink'];
+  showDamagedModal = signal(false);
+  selectedInventory = signal<EggInventory | null>(null);
 
-  eggForm = this.fb.group({
-    id_tipo_huevo: ['', Validators.required],
-    cantidad: [null, [Validators.required, Validators.min(1)]],
-    id_lote: [''],
-    fecha: [new Date().toISOString().split('T')[0]],
+  // Form matching RegisterEggProductionDto: { loteId, tipoHuevoId, cantidad }
+  classifyForm = this.fb.group({
+    loteId: ['', Validators.required],
+    tipoHuevoId: ['', Validators.required],
+    cantidad: [null as number | null, [Validators.required, Validators.min(1)]],
   });
+
+  // Form matching RegisterDamagedEggsDto: { inventarioId, cantidad, razon }
+  damagedForm = this.fb.group({
+    cantidad: [null as number | null, [Validators.required, Validators.min(1)]],
+    razon: ['', Validators.required],
+  });
+
+  private typeColors = ['card_azul', 'card_morado', 'card_verde', 'card_verde_claro', 'card_amarillo', 'card_naranja', 'card_rojo'];
 
   ngOnInit(): void {
     this.loadData();
     this.eggTypesService.getAll().subscribe((t) => this.eggTypes.set(t));
-    this.flocksService.getAll().subscribe((f) => this.flocks.set(f.filter((fl) => fl.estado === 'activo')));
+    this.flocksService.getAll().subscribe((f) => this.flocks.set(Array.isArray(f) ? f.filter((fl) => fl.estado === 'activo') : []));
+  }
+
+  typeColorClass(index: number): string {
+    return this.typeColors[index % this.typeColors.length];
   }
 
   private loadData(): void {
@@ -201,34 +362,65 @@ export class EggsComponent implements OnInit {
     });
   }
 
-  getCountByType(typeId: number): number {
-    return this.inventory().filter((e) => e.tipo_huevo?.id === typeId).reduce((s, e) => s + (e.cantidad || 0), 0);
+  getCountByType(typeId: string): number {
+    return this.inventory().filter((e) => e.tipo_huevo?.id_tipo === typeId).reduce((s, e) => s + (e.cantidad || 0), 0);
   }
 
   filterInventory(): void {
-    const q = this.searchQuery.toLowerCase();
-    this.filtered.set(this.inventory().filter((e) => `${e.tipo_huevo?.nombre} ${e.lote?.id}`.toLowerCase().includes(q)));
+    if (this.filterType === 'todos') {
+      this.filtered.set(this.inventory());
+    } else {
+      this.filtered.set(this.inventory().filter((e) => e.tipo_huevo?.tipo === this.filterType));
+    }
   }
 
-  openModal(type: 'production' | 'damaged'): void {
-    this.modalType.set(type);
-    this.eggForm.reset({ fecha: new Date().toISOString().split('T')[0] });
-    this.showProductionModal.set(true);
-  }
-
-  closeModals(): void { this.showProductionModal.set(false); }
-
-  save(): void {
-    if (this.eggForm.invalid) { this.eggForm.markAllAsTouched(); return; }
+  saveProduction(): void {
+    if (this.classifyForm.invalid) { this.classifyForm.markAllAsTouched(); return; }
     this.saving.set(true);
-    const data = this.eggForm.value;
-    const req = this.modalType() === 'production'
-      ? this.eggService.registerProduction(data)
-      : this.eggService.registerDamaged(data);
+    const data = {
+      loteId: this.classifyForm.value.loteId,
+      tipoHuevoId: this.classifyForm.value.tipoHuevoId,
+      cantidad: Number(this.classifyForm.value.cantidad),
+    };
+    this.eggService.registerProduction(data).subscribe({
+      next: () => {
+        this.toast.success('Producción registrada exitosamente');
+        this.classifyForm.reset();
+        this.loadData();
+      },
+      error: (err) => {
+        const msg = err?.error?.message;
+        this.toast.error(msg ? `Error: ${Array.isArray(msg) ? msg.join(', ') : msg}` : 'Error al registrar producción');
+      },
+      complete: () => this.saving.set(false),
+    });
+  }
 
-    req.subscribe({
-      next: () => { this.toast.success('Registro guardado exitosamente'); this.closeModals(); this.loadData(); },
-      error: () => { this.toast.error('Error al guardar el registro'); this.saving.set(false); },
+  openDamagedModal(item: EggInventory): void {
+    this.selectedInventory.set(item);
+    this.damagedForm.reset();
+    this.showDamagedModal.set(true);
+  }
+
+  saveDamaged(): void {
+    const inv = this.selectedInventory();
+    if (!inv || this.damagedForm.invalid) { this.damagedForm.markAllAsTouched(); return; }
+    this.saving.set(true);
+    const data = {
+      inventarioId: inv.id_inventario_huevo,
+      cantidad: Number(this.damagedForm.value.cantidad),
+      razon: this.damagedForm.value.razon || 'Dañado',
+    };
+    this.eggService.registerDamaged(data).subscribe({
+      next: () => {
+        this.toast.success('Huevos dañados registrados');
+        this.showDamagedModal.set(false);
+        this.loadData();
+      },
+      error: (err) => {
+        const msg = err?.error?.message;
+        this.toast.error(msg ? `Error: ${Array.isArray(msg) ? msg.join(', ') : msg}` : 'Error al registrar dañados');
+      },
       complete: () => this.saving.set(false),
     });
   }

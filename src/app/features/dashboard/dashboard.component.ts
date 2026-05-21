@@ -1,7 +1,7 @@
-import { Component, inject, OnInit, signal, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FlocksService, EggInventoryService, BarnsService, SuppliesService } from '../../core/services/api.services';
-import { Chart, registerables } from 'chart.js';
+import { FlocksService, BarnsService, EggInventoryService, SuppliesService } from '../../core/services/api.services';
+import { Chart, ChartConfiguration, registerables } from 'chart.js';
 
 Chart.register(...registerables);
 
@@ -11,206 +11,260 @@ Chart.register(...registerables);
   imports: [CommonModule],
   template: `
     <div class="dashboard-page">
-      <!-- Module Header -->
-      <div class="module-header">
-        <div class="module-header-left">
-          <div class="module-icon"><i class="fas fa-home"></i></div>
-          <div>
-            <h2>Inicio</h2>
-            <p>Resumen general del sistema avícola</p>
+      <!-- Título del Dashboard -->
+      <div class="dashboard_titulo">
+        <h2>Inicio</h2>
+      </div>
+
+      <!-- Cards de Estadísticas -->
+      <div class="dashboard_cards">
+        <!-- Card: Huevos -->
+        <div class="dashboard_card">
+          <div class="card_icono naranja">
+            <i class="fas fa-egg"></i>
+          </div>
+          <div class="card_info">
+            <p class="card_label">Huevos</p>
+            <h3 class="card_valor">{{ totalHuevos() }}</h3>
+            <span class="card_subtexto">Cantidad de huevos</span>
+          </div>
+        </div>
+
+        <!-- Card: Gallinas -->
+        <div class="dashboard_card">
+          <div class="card_icono verde">
+            <i class="fas fa-dove"></i>
+          </div>
+          <div class="card_info">
+            <p class="card_label">Gallinas</p>
+            <h3 class="card_valor">{{ totalGallinas() }}</h3>
+            <span class="card_subtexto">Total de gallinas</span>
+          </div>
+        </div>
+
+        <!-- Card: Lotes -->
+        <div class="dashboard_card">
+          <div class="card_icono morado">
+            <i class="fas fa-layer-group"></i>
+          </div>
+          <div class="card_info">
+            <p class="card_label">Lotes</p>
+            <h3 class="card_valor">{{ totalLotes() }}</h3>
+            <span class="card_subtexto">Lotes activos</span>
+          </div>
+        </div>
+
+        <!-- Card: Clasificación -->
+        <div class="dashboard_card">
+          <div class="card_icono azul">
+            <i class="fas fa-chart-bar"></i>
+          </div>
+          <div class="card_info">
+            <p class="card_label">Clasificación</p>
+            <h3 class="card_valor">{{ totalClasificados() }}</h3>
+            <span class="card_subtexto">Huevos clasificados</span>
+          </div>
+        </div>
+
+        <!-- Card: Galpones -->
+        <div class="dashboard_card">
+          <div class="card_icono cyan">
+            <i class="fas fa-warehouse"></i>
+          </div>
+          <div class="card_info">
+            <p class="card_label">Galpones</p>
+            <h3 class="card_valor">{{ totalGalpones() }}</h3>
+            <span class="card_subtexto">Total galpones</span>
+          </div>
+        </div>
+
+        <!-- Card: Insumos -->
+        <div class="dashboard_card">
+          <div class="card_icono rosa">
+            <i class="fas fa-box"></i>
+          </div>
+          <div class="card_info">
+            <p class="card_label">Insumos</p>
+            <h3 class="card_valor">{{ totalInsumos() }}</h3>
+            <span class="card_subtexto">Insumos registrados</span>
           </div>
         </div>
       </div>
 
-      <!-- Stats Cards -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-icon orange"><i class="fas fa-egg"></i></div>
-          <div class="stat-info">
-            <div class="stat-label">Huevos</div>
-            <div class="stat-value">{{ stats().totalHuevos }}</div>
-            <div class="stat-sub">Total inventario</div>
-          </div>
+      <!-- Gráficas -->
+      <div class="dashboard_graficas">
+        <!-- Gráfica 1: Clasificación de Huevos (Barras) -->
+        <div class="grafica_contenedor">
+          <h3 class="grafica_titulo">Reporte de Clasificación de Huevos</h3>
+          <canvas id="chartBarras"></canvas>
         </div>
-        <div class="stat-card">
-          <div class="stat-icon green"><i class="fas fa-dove"></i></div>
-          <div class="stat-info">
-            <div class="stat-label">Gallinas</div>
-            <div class="stat-value">{{ stats().totalGallinas }}</div>
-            <div class="stat-sub">Total activas</div>
-          </div>
+
+        <!-- Gráfica 2: Clasificación de Huevos (Dona) -->
+        <div class="grafica_contenedor">
+          <h3 class="grafica_titulo">Tipos de Insumos</h3>
+          <canvas id="chartDona"></canvas>
         </div>
-        <div class="stat-card">
-          <div class="stat-icon purple"><i class="fas fa-layer-group"></i></div>
-          <div class="stat-info">
-            <div class="stat-label">Lotes</div>
-            <div class="stat-value">{{ stats().totalLotes }}</div>
-            <div class="stat-sub">Lotes activos</div>
-          </div>
+
+        <!-- Gráfica 3: Producción de Huevos (Línea) -->
+        <div class="grafica_contenedor">
+          <h3 class="grafica_titulo">Producción de Huevos</h3>
+          <canvas id="chartLinea"></canvas>
         </div>
-        <div class="stat-card">
-          <div class="stat-icon cyan"><i class="fas fa-warehouse"></i></div>
-          <div class="stat-info">
-            <div class="stat-label">Galpones</div>
-            <div class="stat-value">{{ stats().totalGalpones }}</div>
-            <div class="stat-sub">Total galpones</div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon pink"><i class="fas fa-box"></i></div>
-          <div class="stat-info">
-            <div class="stat-label">Insumos</div>
-            <div class="stat-value">{{ stats().totalInsumos }}</div>
-            <div class="stat-sub">Registrados</div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon blue"><i class="fas fa-chart-bar"></i></div>
-          <div class="stat-info">
-            <div class="stat-label">Clasificados</div>
-            <div class="stat-value">{{ stats().huevosClasificados }}</div>
-            <div class="stat-sub">Huevos clasificados</div>
-          </div>
+
+        <!-- Gráfica 4: Estado de Gallinas (Torta) -->
+        <div class="grafica_contenedor">
+          <h3 class="grafica_titulo">Estado de Gallinas</h3>
+          <canvas id="chartTorta"></canvas>
         </div>
       </div>
-
-      <!-- Charts -->
-      <div class="charts-grid">
-        <div class="chart-card">
-          <h3><i class="fas fa-chart-bar" style="color:#39A900;margin-right:0.8rem"></i>Producción por Tipo de Huevo</h3>
-          <canvas #barChart></canvas>
-        </div>
-        <div class="chart-card">
-          <h3><i class="fas fa-chart-pie" style="color:#39A900;margin-right:0.8rem"></i>Clasificación de Huevos</h3>
-          <canvas #donutChart></canvas>
-        </div>
-        <div class="chart-card">
-          <h3><i class="fas fa-chart-line" style="color:#39A900;margin-right:0.8rem"></i>Producción de Huevos</h3>
-          <canvas #lineChart></canvas>
-        </div>
-        <div class="chart-card">
-          <h3><i class="fas fa-chart-pie" style="color:#39A900;margin-right:0.8rem"></i>Estado de Lotes</h3>
-          <canvas #pieChart></canvas>
-        </div>
-      </div>
-
-      @if (loading()) {
-        <div class="loading-container">
-          <div class="spinner"></div>
-        </div>
-      }
     </div>
   `,
   styles: [`
-    .dashboard-page { animation: fadeIn 0.3s ease; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .dashboard_titulo { margin-bottom: 2.5rem; }
+    .dashboard_titulo h2 { font-size: 2.8rem; font-weight: 700; color: #333; }
+    
+    .dashboard_cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; margin-bottom: 3.5rem; }
+    .dashboard_card { background: white; border-radius: 15px; padding: 2.5rem 2rem; display: flex; align-items: center; gap: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.3s ease; border: 1px solid #f0f0f0; }
+    .dashboard_card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+    
+    .card_icono { width: 65px; height: 65px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 2.8rem; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .card_icono.naranja { background: linear-gradient(135deg, #FF9800, #F57C00); }
+    .card_icono.verde { background: linear-gradient(135deg, #4CAF50, #388E3C); }
+    .card_icono.morado { background: linear-gradient(135deg, #9C27B0, #7B1FA2); }
+    .card_icono.azul { background: linear-gradient(135deg, #2196F3, #1976D2); }
+    .card_icono.cyan { background: linear-gradient(135deg, #00BCD4, #0097A7); }
+    .card_icono.rosa { background: linear-gradient(135deg, #E91E63, #C2185B); }
+    
+    .card_info { flex: 1; }
+    .card_label { font-size: 1.4rem; color: #666; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    .card_valor { font-size: 3.2rem; font-weight: 700; color: #333; margin-bottom: 0.2rem; line-height: 1; }
+    .card_subtexto { font-size: 1.2rem; color: #888; }
+    
+    .dashboard_graficas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2.5rem; margin-bottom: 3rem; }
+    .grafica_contenedor { background: white; border-radius: 15px; padding: 2.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #f0f0f0; }
+    .grafica_titulo { font-size: 1.6rem; font-weight: 600; color: #333; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid #eee; }
+    canvas { width: 100% !important; height: 300px !important; }
+    
+    @media (max-width: 1200px) { .dashboard_cards { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 900px) { .dashboard_graficas { grid-template-columns: 1fr; } }
+    @media (max-width: 768px) { .dashboard_cards { grid-template-columns: 1fr; } }
   `],
 })
-export class DashboardComponent implements OnInit, AfterViewInit {
-  @ViewChild('barChart') barChartRef!: ElementRef<HTMLCanvasElement>;
-  @ViewChild('donutChart') donutChartRef!: ElementRef<HTMLCanvasElement>;
-  @ViewChild('lineChart') lineChartRef!: ElementRef<HTMLCanvasElement>;
-  @ViewChild('pieChart') pieChartRef!: ElementRef<HTMLCanvasElement>;
-
+export class DashboardComponent implements OnInit {
   private flocksService = inject(FlocksService);
-  private eggService = inject(EggInventoryService);
   private barnsService = inject(BarnsService);
+  private eggInventoryService = inject(EggInventoryService);
   private suppliesService = inject(SuppliesService);
 
-  loading = signal(true);
-  stats = signal({
-    totalHuevos: 0, totalGallinas: 0, totalLotes: 0,
-    huevosClasificados: 0, totalGalpones: 0, totalInsumos: 0,
-  });
+  totalHuevos = signal(0);
+  totalGallinas = signal(0);
+  totalLotes = signal(0);
+  totalClasificados = signal(0);
+  totalGalpones = signal(0);
+  totalInsumos = signal(0);
 
-  ngOnInit(): void { this.loadStats(); }
-
-  ngAfterViewInit(): void {
-    setTimeout(() => this.initCharts(), 500);
+  ngOnInit(): void {
+    this.loadData();
   }
 
-  private loadStats(): void {
-    this.flocksService.getAll().subscribe({
-      next: (flocks) => {
-        const activos = flocks.filter((f) => f.estado === 'activo');
-        const totalGallinas = activos.reduce((sum, f) => sum + (f.cantidad_aves || 0), 0);
-        this.stats.update((s) => ({ ...s, totalLotes: activos.length, totalGallinas }));
-      },
+  private loadData(): void {
+    this.flocksService.getAll().subscribe((flocks) => {
+      this.totalLotes.set(flocks.filter((f) => f.estado === 'activo').length);
+      this.totalGallinas.set(flocks.filter((f) => f.estado === 'activo').reduce((sum, f) => sum + (f.total_aves || 0), 0));
+      this.renderGallinasChart(flocks);
     });
 
-    this.eggService.getAll().subscribe({
-      next: (eggs) => {
-        const total = eggs.reduce((sum, e) => sum + (e.cantidad || 0), 0);
-        this.stats.update((s) => ({ ...s, totalHuevos: total, huevosClasificados: eggs.length }));
-      },
+    this.barnsService.getAll().subscribe((barns) => {
+      this.totalGalpones.set(barns.length);
     });
 
-    this.barnsService.getAll().subscribe({
-      next: (barns) => this.stats.update((s) => ({ ...s, totalGalpones: barns.length })),
+    this.eggInventoryService.getAll().subscribe((eggs) => {
+      this.totalHuevos.set(eggs.reduce((sum, e) => sum + (e.cantidad || 0), 0));
+      this.totalClasificados.set(eggs.length);
+      this.renderHuevosChart(eggs);
+      this.renderProduccionChart(eggs);
     });
 
-    this.suppliesService.getAll().subscribe({
-      next: (supplies) => {
-        this.stats.update((s) => ({ ...s, totalInsumos: supplies.length }));
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
+    this.suppliesService.getAll().subscribe((supplies) => {
+      this.totalInsumos.set(supplies.length);
+      this.renderInsumosChart(supplies);
     });
   }
 
-  private initCharts(): void {
-    const green = '#39A900';
-    const colors = ['#39A900', '#FF9800', '#2196F3', '#9C27B0', '#00BCD4', '#E91E63'];
+  private renderHuevosChart(eggs: any[]): void {
+    const tipos = ['Jumbo', 'AAA', 'AA', 'A', 'B', 'C'];
+    const conteos = tipos.map(tipo => 
+      eggs.filter(e => e.tipo_huevo?.tipo === tipo).reduce((sum, e) => sum + (e.cantidad || 0), 0)
+    );
 
-    if (this.barChartRef) {
-      new Chart(this.barChartRef.nativeElement, {
-        type: 'bar',
-        data: {
-          labels: ['JUMBO', 'AAA', 'AA', 'A', 'B', 'Dañados'],
-          datasets: [{ label: 'Cantidad', data: [320, 280, 190, 150, 80, 30], backgroundColor: colors, borderRadius: 6 }],
-        },
-        options: { responsive: true, plugins: { legend: { display: false } } },
-      });
-    }
+    new Chart('chartBarras', {
+      type: 'bar',
+      data: {
+        labels: tipos,
+        datasets: [{
+          label: 'Cantidad de Huevos',
+          data: conteos,
+          backgroundColor: ['#9C27B0', '#4CAF50', '#81C784', '#FFEB3B', '#FF9800', '#F44336'],
+          borderRadius: 6
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+  }
 
-    if (this.donutChartRef) {
-      new Chart(this.donutChartRef.nativeElement, {
-        type: 'doughnut',
-        data: {
-          labels: ['JUMBO', 'AAA', 'AA', 'A', 'B'],
-          datasets: [{ data: [30, 27, 18, 14, 11], backgroundColor: colors }],
-        },
-        options: { responsive: true },
-      });
-    }
+  private renderInsumosChart(supplies: any[]): void {
+    const categories = ['Alimento', 'Herramientas', 'Medicamentos'];
+    const conteos = categories.map(cat => 
+      supplies.filter(s => (s.categoria?.nombre_categoria || '').toLowerCase().includes(cat.toLowerCase())).length
+    );
 
-    if (this.lineChartRef) {
-      new Chart(this.lineChartRef.nativeElement, {
-        type: 'line',
-        data: {
-          labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
-          datasets: [{
-            label: 'Huevos',
-            data: [1200, 1350, 1100, 1500, 1400, 1600],
-            borderColor: green,
-            backgroundColor: 'rgba(57,169,0,0.1)',
-            tension: 0.4,
-            fill: true,
-          }],
-        },
-        options: { responsive: true },
-      });
-    }
+    new Chart('chartDona', {
+      type: 'doughnut',
+      data: {
+        labels: categories,
+        datasets: [{
+          data: conteos,
+          backgroundColor: ['#4CAF50', '#2196F3', '#9C27B0'],
+          borderWidth: 0
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, cutout: '70%' }
+    });
+  }
 
-    if (this.pieChartRef) {
-      new Chart(this.pieChartRef.nativeElement, {
-        type: 'pie',
-        data: {
-          labels: ['Activos', 'Finalizados'],
-          datasets: [{ data: [75, 25], backgroundColor: [green, '#e0e0e0'] }],
-        },
-        options: { responsive: true },
-      });
-    }
+  private renderProduccionChart(eggs: any[]): void {
+    new Chart('chartLinea', {
+      type: 'line',
+      data: {
+        labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+        datasets: [{
+          label: 'Producción',
+          data: [120, 150, 180, 190, 160, 200, 220],
+          borderColor: '#2196F3',
+          tension: 0.4,
+          fill: true,
+          backgroundColor: 'rgba(33, 150, 243, 0.1)'
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+  }
+
+  private renderGallinasChart(flocks: any[]): void {
+    const activas = flocks.filter(f => f.estado === 'activo').reduce((sum, f) => sum + (f.total_aves || 0), 0);
+    const finalizadas = flocks.filter(f => f.estado === 'finalizado').reduce((sum, f) => sum + (f.total_aves || 0), 0);
+
+    new Chart('chartTorta', {
+      type: 'pie',
+      data: {
+        labels: ['Activas', 'Finalizadas/Muertas'],
+        datasets: [{
+          data: [activas, finalizadas || 50], // Fallback if 0 for visual purposes
+          backgroundColor: ['#4CAF50', '#F44336'],
+          borderWidth: 0
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+    });
   }
 }

@@ -56,8 +56,8 @@ import { Flock, Barn, Breed } from '../../core/models';
         <div class="stat-card">
           <div class="stat-icon red"><i class="fas fa-skull-crossbones"></i></div>
           <div class="stat-info">
-            <div class="stat-label">Aves Muertas</div>
-            <div class="stat-value">{{ totalDeadBirds() }}</div>
+            <div class="stat-label">Total Lotes</div>
+            <div class="stat-value">{{ flocks().length }}</div>
           </div>
         </div>
       </div>
@@ -98,29 +98,27 @@ import { Flock, Barn, Breed } from '../../core/models';
                 <thead>
                   <tr>
                     <th>ID</th>
-                    <th>Cantidad Aves</th>
-                    <th>Aves Muertas</th>
-                    <th>Fecha Ingreso</th>
+                    <th>Nombre</th>
+                    <th>Total Aves</th>
                     <th>Estado</th>
-                    <th>Galpón</th>
                     <th>Raza</th>
+                    <th>Observación</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  @for (flock of filteredFlocks(); track flock.id) {
+                  @for (flock of filteredFlocks(); track flock.id_lote) {
                     <tr>
-                      <td><strong>#{{ flock.id }}</strong></td>
-                      <td>{{ flock.cantidad_aves | number }}</td>
-                      <td>{{ flock.cantidad_aves_muertas || 0 }}</td>
-                      <td>{{ flock.fecha_ingreso ? (flock.fecha_ingreso | date:'dd/MM/yyyy') : '—' }}</td>
+                      <td><span class="badge active">{{ flock.id_lote.substring(0, 8) }}…</span></td>
+                      <td><strong>{{ flock.nombre }}</strong></td>
+                      <td>{{ flock.total_aves | number }}</td>
                       <td>
                         <span class="badge {{ flock.estado === 'activo' ? 'active' : 'finished' }}">
                           {{ flock.estado || 'activo' }}
                         </span>
                       </td>
-                      <td>{{ flock.gestion_galpon?.nombre || '—' }}</td>
                       <td>{{ flock.raza?.nombre || '—' }}</td>
+                      <td>{{ flock.observacion || '—' }}</td>
                       <td class="actions-cell">
                         @if (flock.estado === 'activo') {
                           <button class="btn-icon edit" title="Registrar Aves Muertas" (click)="openDeadBirdsModal(flock)">
@@ -156,18 +154,19 @@ import { Flock, Barn, Breed } from '../../core/models';
             <div class="table-responsive">
               <table class="data-table">
                 <thead>
-                  <tr><th>ID</th><th>Nombre</th><th>Capacidad</th><th>Estado</th><th>Acciones</th></tr>
+                  <tr><th>ID</th><th>Código</th><th>Nombre</th><th>Capacidad</th><th>Longitud</th><th>Acciones</th></tr>
                 </thead>
                 <tbody>
-                  @for (barn of barns(); track barn.id) {
+                  @for (barn of barns(); track barn.id_galpon) {
                     <tr>
-                      <td>#{{ barn.id }}</td>
+                      <td><span class="badge active">{{ barn.id_galpon.substring(0, 8) }}…</span></td>
+                      <td>{{ barn.codigo }}</td>
                       <td><strong>{{ barn.nombre }}</strong></td>
-                      <td>{{ barn.capacidad || '—' }}</td>
-                      <td><span class="badge active">{{ barn.estado || 'activo' }}</span></td>
+                      <td>{{ barn.capacidad_max_aves || '—' }}</td>
+                      <td>{{ barn.longitud || '—' }} m</td>
                       <td class="actions-cell">
                         <button class="btn-icon edit" (click)="editBarn(barn)"><i class="fas fa-edit"></i></button>
-                        <button class="btn-icon delete" (click)="deleteBarn(barn.id)"><i class="fas fa-trash"></i></button>
+                        <button class="btn-icon delete" (click)="deleteBarn(barn.id_galpon)"><i class="fas fa-trash"></i></button>
                       </td>
                     </tr>
                   }
@@ -191,33 +190,32 @@ import { Flock, Barn, Breed } from '../../core/models';
             <form [formGroup]="flockForm">
               <div class="form-row">
                 <div class="form-group">
-                  <label><i class="fas fa-dove"></i> Cantidad de Aves</label>
-                  <input type="number" formControlName="cantidad_aves" placeholder="Ej: 500" min="1" />
+                  <label><i class="fas fa-tag"></i> Nombre del Lote</label>
+                  <input type="text" formControlName="nombre" placeholder="Ej: Lote A-2026" />
                 </div>
                 <div class="form-group">
-                  <label><i class="fas fa-calendar"></i> Fecha de Ingreso</label>
-                  <input type="date" formControlName="fecha_ingreso" />
+                  <label><i class="fas fa-dove"></i> Total de Aves</label>
+                  <input type="number" formControlName="total_aves" placeholder="Ej: 500" min="1" />
                 </div>
               </div>
               <div class="form-row">
                 <div class="form-group">
-                  <label><i class="fas fa-warehouse"></i> Galpón</label>
-                  <select formControlName="id_galpon">
-                    <option value="">Seleccionar galpón</option>
-                    @for (b of barns(); track b.id) {
-                      <option [value]="b.id">{{ b.nombre }}</option>
+                  <label><i class="fas fa-dna"></i> Raza</label>
+                  <select formControlName="razaId">
+                    <option value="">Seleccionar raza</option>
+                    @for (breed of breeds(); track breed.id_raza) {
+                      <option [value]="breed.id_raza">{{ breed.nombre }}</option>
                     }
                   </select>
                 </div>
                 <div class="form-group">
-                  <label><i class="fas fa-dna"></i> Raza</label>
-                  <select formControlName="id_raza">
-                    <option value="">Seleccionar raza</option>
-                    @for (breed of breeds(); track breed.id) {
-                      <option [value]="breed.id">{{ breed.nombre }}</option>
-                    }
-                  </select>
+                  <label><i class="fas fa-utensils"></i> Ración de Alimento</label>
+                  <input type="text" formControlName="racion_alimento" placeholder="Ej: 120g/día" />
                 </div>
+              </div>
+              <div class="form-group">
+                <label><i class="fas fa-comment"></i> Observación</label>
+                <textarea formControlName="observacion" placeholder="Observaciones..." rows="2"></textarea>
               </div>
             </form>
           </div>
@@ -242,17 +240,25 @@ import { Flock, Barn, Breed } from '../../core/models';
           </div>
           <div class="modal-body">
             <form [formGroup]="barnForm">
-              <div class="form-group">
-                <label><i class="fas fa-warehouse"></i> Nombre del Galpón</label>
-                <input type="text" formControlName="nombre" placeholder="Ej: Galpón 1" />
+              <div class="form-row">
+                <div class="form-group">
+                  <label><i class="fas fa-barcode"></i> Código</label>
+                  <input type="text" formControlName="codigo" placeholder="Ej: G-001" />
+                </div>
+                <div class="form-group">
+                  <label><i class="fas fa-warehouse"></i> Nombre del Galpón</label>
+                  <input type="text" formControlName="nombre" placeholder="Ej: Galpón 1" />
+                </div>
               </div>
-              <div class="form-group">
-                <label><i class="fas fa-users"></i> Capacidad</label>
-                <input type="number" formControlName="capacidad" placeholder="Ej: 500" min="1" />
-              </div>
-              <div class="form-group">
-                <label><i class="fas fa-info-circle"></i> Descripción</label>
-                <textarea formControlName="descripcion" placeholder="Descripción opcional..." rows="3"></textarea>
+              <div class="form-row">
+                <div class="form-group">
+                  <label><i class="fas fa-users"></i> Capacidad Máx. Aves</label>
+                  <input type="number" formControlName="capacidadMaxAves" placeholder="Ej: 500" min="1" />
+                </div>
+                <div class="form-group">
+                  <label><i class="fas fa-ruler-horizontal"></i> Longitud (m)</label>
+                  <input type="number" formControlName="longitud" placeholder="Ej: 20" min="1" step="0.1" />
+                </div>
               </div>
             </form>
           </div>
@@ -279,7 +285,7 @@ import { Flock, Barn, Breed } from '../../core/models';
             <form [formGroup]="deadBirdsForm">
               <div class="form-group">
                 <label><i class="fas fa-layer-group"></i> Lote</label>
-                <input type="text" [value]="'Lote #' + selectedFlock()?.id" disabled />
+                <input type="text" [value]="selectedFlock()?.nombre || 'Lote ' + selectedFlock()?.id_lote?.substring(0, 8)" disabled />
               </div>
               <div class="form-row">
                 <div class="form-group">
@@ -354,19 +360,22 @@ export class FlocksComponent implements OnInit {
 
   totalGallinas = signal(0);
   activeFlocks = signal(0);
-  totalDeadBirds = signal(0);
 
+  // Form matching CreateFlockDto: { nombre, total_aves, razaId, observacion, racion_alimento }
   flockForm = this.fb.group({
-    cantidad_aves: [null, [Validators.required, Validators.min(1)]],
-    fecha_ingreso: [''],
-    id_galpon: [''],
-    id_raza: [''],
+    nombre: ['', Validators.required],
+    total_aves: [null as number | null, [Validators.required, Validators.min(1)]],
+    razaId: ['', Validators.required],
+    observacion: ['', Validators.required],
+    racion_alimento: ['', Validators.required],
   });
 
+  // Form matching CreateBarnDto: { codigo, nombre, capacidadMaxAves, longitud }
   barnForm = this.fb.group({
+    codigo: ['', Validators.required],
     nombre: ['', Validators.required],
-    capacidad: [null as number | null],
-    descripcion: [''],
+    capacidadMaxAves: [null as number | null, [Validators.required, Validators.min(1)]],
+    longitud: [null as number | null, [Validators.required, Validators.min(1)]],
   });
 
   deadBirdsForm = this.fb.group({
@@ -386,8 +395,7 @@ export class FlocksComponent implements OnInit {
         this.filteredFlocks.set(flocks);
         const activos = flocks.filter((f) => f.estado === 'activo');
         this.activeFlocks.set(activos.length);
-        this.totalGallinas.set(activos.reduce((s, f) => s + (f.cantidad_aves || 0), 0));
-        this.totalDeadBirds.set(flocks.reduce((s, f) => s + (f.cantidad_aves_muertas || 0), 0));
+        this.totalGallinas.set(activos.reduce((s, f) => s + (f.total_aves || 0), 0));
         this.loading.set(false);
       },
       error: () => this.loading.set(false),
@@ -399,7 +407,7 @@ export class FlocksComponent implements OnInit {
 
   filterFlocks(): void {
     const q = this.searchQuery.toLowerCase();
-    this.filteredFlocks.set(this.flocks().filter((f) => `${f.id} ${f.gestion_galpon?.nombre} ${f.raza?.nombre}`.toLowerCase().includes(q)));
+    this.filteredFlocks.set(this.flocks().filter((f) => `${f.nombre} ${f.raza?.nombre}`.toLowerCase().includes(q)));
   }
 
   openModal(type: 'flock' | 'barn'): void {
@@ -416,9 +424,14 @@ export class FlocksComponent implements OnInit {
   saveFlock(): void {
     if (this.flockForm.invalid) { this.flockForm.markAllAsTouched(); return; }
     this.savingFlock.set(true);
-    this.flocksService.create(this.flockForm.value as Partial<Flock>).subscribe({
+    const data = this.flockForm.value;
+    this.flocksService.create(data as Partial<Flock>).subscribe({
       next: () => { this.toast.success('Lote registrado exitosamente'); this.closeModals(); this.loadData(); },
-      error: () => { this.toast.error('Error al registrar el lote'); this.savingFlock.set(false); },
+      error: (err) => {
+        const msg = err?.error?.message;
+        this.toast.error(msg ? `Error: ${Array.isArray(msg) ? msg.join(', ') : msg}` : 'Error al registrar el lote');
+        this.savingFlock.set(false);
+      },
       complete: () => this.savingFlock.set(false),
     });
   }
@@ -427,20 +440,28 @@ export class FlocksComponent implements OnInit {
     if (this.barnForm.invalid) { this.barnForm.markAllAsTouched(); return; }
     const data = this.barnForm.value as Partial<Barn>;
     const editing = this.editingBarn();
-    const req = editing ? this.barnsService.update(editing.id, data) : this.barnsService.create(data);
+    const req = editing ? this.barnsService.update(editing.id_galpon, data) : this.barnsService.create(data);
     req.subscribe({
       next: () => { this.toast.success(editing ? 'Galpón actualizado' : 'Galpón registrado'); this.closeModals(); this.loadData(); },
-      error: () => this.toast.error('Error al guardar el galpón'),
+      error: (err) => {
+        const msg = err?.error?.message;
+        this.toast.error(msg ? `Error: ${Array.isArray(msg) ? msg.join(', ') : msg}` : 'Error al guardar el galpón');
+      },
     });
   }
 
   editBarn(barn: Barn): void {
     this.editingBarn.set(barn);
-    this.barnForm.patchValue({ nombre: barn.nombre, capacidad: barn.capacidad ?? null, descripcion: barn.descripcion ?? '' });
+    this.barnForm.patchValue({
+      codigo: barn.codigo,
+      nombre: barn.nombre,
+      capacidadMaxAves: barn.capacidad_max_aves ?? null,
+      longitud: barn.longitud ?? null,
+    });
     this.showBarnModal.set(true);
   }
 
-  deleteBarn(id: number): void {
+  deleteBarn(id: string): void {
     if (!confirm('¿Eliminar este galpón?')) return;
     this.barnsService.delete(id).subscribe({
       next: () => { this.toast.success('Galpón eliminado'); this.loadData(); },
@@ -457,16 +478,16 @@ export class FlocksComponent implements OnInit {
   saveDeadBirds(): void {
     const flock = this.selectedFlock();
     if (!flock || this.deadBirdsForm.invalid) return;
-    const data = { id_lote: flock.id, ...this.deadBirdsForm.value };
-    this.flocksService.registerDeadBirds(data as unknown as { id_lote: number; cantidad: number; fecha?: string; motivo?: string }).subscribe({
+    const data = { id_lote: flock.id_lote, ...this.deadBirdsForm.value };
+    this.flocksService.registerDeadBirds(data as unknown as { id_lote: string; cantidad: number; fecha?: string; motivo?: string }).subscribe({
       next: () => { this.toast.success('Registro de aves muertas guardado'); this.closeModals(); this.loadData(); },
       error: () => this.toast.error('Error al registrar aves muertas'),
     });
   }
 
   finalizeFlock(flock: Flock): void {
-    if (!confirm(`¿Finalizar el Lote #${flock.id}? Esta acción no se puede deshacer.`)) return;
-    this.flocksService.finalizeFlock({ id_lote: flock.id }).subscribe({
+    if (!confirm(`¿Finalizar el Lote "${flock.nombre}"? Esta acción no se puede deshacer.`)) return;
+    this.flocksService.finalizeFlock({ id_lote: flock.id_lote }).subscribe({
       next: () => { this.toast.success('Lote finalizado exitosamente'); this.loadData(); },
       error: () => this.toast.error('Error al finalizar el lote'),
     });

@@ -13,6 +13,7 @@ import { BarnsService } from '../../../core/services/api.services';
       subtitle="Gestiona los galpones de la granja."
       entityName="Galpón"
       icon="fa-warehouse"
+      idField="id_galpon"
       [fields]="fields"
     />
   `,
@@ -20,8 +21,9 @@ import { BarnsService } from '../../../core/services/api.services';
 export class BarnsConfigComponent {
   service = inject(BarnsService);
   fields: CrudField[] = [
+    { key: 'codigo', label: 'Código', type: 'text', placeholder: 'Ej: G-001', required: true },
     { key: 'nombre', label: 'Nombre', type: 'text', placeholder: 'Ej: Galpón 1', required: true },
-    { key: 'capacidad', label: 'Capacidad', type: 'number', placeholder: 'Ej: 500', required: false },
-    { key: 'descripcion', label: 'Descripción', type: 'textarea', placeholder: 'Descripción...', required: false },
+    { key: 'capacidadMaxAves', label: 'Capacidad Máx. Aves', type: 'number', placeholder: 'Ej: 500', required: true },
+    { key: 'longitud', label: 'Longitud (m)', type: 'number', placeholder: 'Ej: 20', required: true },
   ];
 }

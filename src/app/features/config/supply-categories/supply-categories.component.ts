@@ -13,6 +13,7 @@ import { SupplyCategoriesService } from '../../../core/services/api.services';
       subtitle="Clasifica los insumos de la granja."
       entityName="Categoría"
       icon="fa-tags"
+      idField="id_categoria_insumo"
       [fields]="fields"
     />
   `,
@@ -20,7 +21,6 @@ import { SupplyCategoriesService } from '../../../core/services/api.services';
 export class SupplyCategoriesComponent {
   service = inject(SupplyCategoriesService);
   fields: CrudField[] = [
-    { key: 'nombre', label: 'Nombre', type: 'text', placeholder: 'Ej: Alimentos', required: true },
-    { key: 'descripcion', label: 'Descripción', type: 'textarea', placeholder: 'Descripción...', required: false },
+    { key: 'nombre_categoria', label: 'Nombre', type: 'text', placeholder: 'Ej: Alimentos', required: true },
   ];
 }

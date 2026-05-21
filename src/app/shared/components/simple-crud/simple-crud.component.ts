@@ -57,15 +57,15 @@ export interface CrudField {
                 </tr>
               </thead>
               <tbody>
-                @for (item of filtered(); track item['id']) {
+                @for (item of filtered(); track $index) {
                   <tr>
-                    <td>#{{ asRecord(item)['id'] }}</td>
+                    <td><span class="badge active">{{ getItemIdShort(item) }}</span></td>
                     @for (field of fields; track field.key) {
                       <td>{{ asRecord(item)[field.key] || '—' }}</td>
                     }
                     <td class="actions-cell">
                       <button class="btn-icon edit" (click)="editItem(item)"><i class="fas fa-edit"></i></button>
-                      <button class="btn-icon delete" (click)="deleteItem(item.id)"><i class="fas fa-trash"></i></button>
+                      <button class="btn-icon delete" (click)="deleteItem(getItemId(item))"><i class="fas fa-trash"></i></button>
                     </td>
                   </tr>
                 }
@@ -118,13 +118,15 @@ export interface CrudField {
     .btn-close { background: none; border: none; font-size: 2rem; color: var(--gray-dark); cursor: pointer; }
   `],
 })
-export class SimpleCrudComponent<T extends { id: number }> implements OnInit {
+export class SimpleCrudComponent<T> implements OnInit {
   @Input({ required: true }) service!: BaseApiService<T>;
   @Input({ required: true }) title!: string;
   @Input() subtitle = '';
   @Input() entityName = 'Registro';
   @Input() icon = 'fa-list';
   @Input({ required: true }) fields!: CrudField[];
+  /** Name of the primary key field in the backend entity (e.g. 'id_tipo', 'id_galpon') */
+  @Input() idField = 'id';
 
   private fb = inject(FormBuilder);
   private toast = inject(ToastService);
@@ -138,7 +140,24 @@ export class SimpleCrudComponent<T extends { id: number }> implements OnInit {
   saving = signal(false);
   form!: FormGroup;
 
-  asRecord(item: T): Record<string, unknown> { return item as unknown as Record<string, unknown>; }
+  asRecord(item: T): Record<string, unknown> { return item as Record<string, unknown>; }
+
+  /** Gets the primary key value from an item, trying the configured idField */
+  getItemId(item: T): string | number {
+    const rec = item as Record<string, unknown>;
+    // Try the configured idField first
+    if (rec[this.idField] != null) return rec[this.idField] as string | number;
+    // Fallback: search for any key starting with 'id_'
+    const idKey = Object.keys(rec).find(k => k.startsWith('id_') || k === 'id');
+    return idKey ? rec[idKey] as string | number : 0;
+  }
+
+  /** Gets a short display version of the ID */
+  getItemIdShort(item: T): string {
+    const id = this.getItemId(item);
+    if (typeof id === 'string' && id.length > 8) return id.substring(0, 8) + '…';
+    return String(id);
+  }
 
   ngOnInit(): void {
     this.buildForm();
@@ -182,17 +201,32 @@ export class SimpleCrudComponent<T extends { id: number }> implements OnInit {
   save(): void {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     this.saving.set(true);
-    const data = this.form.value as Partial<T>;
+
+    // Clean the form data: remove null/undefined/empty-string values
+    const rawData = this.form.value as Record<string, unknown>;
+    const cleanData: Record<string, unknown> = {};
+    for (const key of Object.keys(rawData)) {
+      if (rawData[key] !== null && rawData[key] !== undefined && rawData[key] !== '') {
+        cleanData[key] = rawData[key];
+      }
+    }
+
     const editing = this.editing();
-    const req = editing ? this.service.update(editing.id, data) : this.service.create(data);
+    const editingId = editing ? this.getItemId(editing) : null;
+    const req = editingId ? this.service.update(editingId, cleanData as Partial<T>) : this.service.create(cleanData as Partial<T>);
+
     req.subscribe({
       next: () => { this.toast.success(`${this.entityName} guardado`); this.closeModal(); this.load(); },
-      error: () => { this.toast.error(`Error al guardar`); this.saving.set(false); },
+      error: (err) => {
+        const msg = err?.error?.message;
+        this.toast.error(msg ? `Error: ${Array.isArray(msg) ? msg.join(', ') : msg}` : 'Error al guardar');
+        this.saving.set(false);
+      },
       complete: () => this.saving.set(false),
     });
   }
 
-  deleteItem(id: number): void {
+  deleteItem(id: string | number): void {
     if (!confirm(`¿Eliminar este ${this.entityName}?`)) return;
     this.service.delete(id).subscribe({
       next: () => { this.toast.success(`${this.entityName} eliminado`); this.load(); },

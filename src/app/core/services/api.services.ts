@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { BaseApiService } from './base-api.service';
+import { Observable, map } from 'rxjs';
+import { BaseApiService, extractData, extractArray } from './base-api.service';
 import { environment } from '../../../environments/environment';
 import {
   User, Role, Permission, Breed, Barn, Flock,
@@ -21,16 +21,18 @@ export class UsersService extends BaseApiService<User> {
 export class RolesService extends BaseApiService<Role> {
   protected endpoint = 'roles';
 
-  assignRole(data: { id_usuario: number; id_rol: number }): Observable<unknown> {
+  assignRole(data: { id_usuario: string; id_rol: number }): Observable<unknown> {
     return this.http.post(`${this.baseUrl}/roles/assign`, data);
   }
 
-  removeRole(data: { id_usuario: number; id_rol: number }): Observable<unknown> {
+  removeRole(data: { id_usuario: string; id_rol: number }): Observable<unknown> {
     return this.http.delete(`${this.baseUrl}/roles/assign/remove`, { body: data });
   }
 
-  getRolesByUser(id_usuario: number): Observable<Role[]> {
-    return this.http.get<Role[]>(`${this.baseUrl}/roles/user/${id_usuario}`);
+  getRolesByUser(id_usuario: string): Observable<Role[]> {
+    return this.http.get<unknown>(`${this.baseUrl}/roles/user/${id_usuario}`).pipe(
+      map(response => extractArray<Role>(response))
+    );
   }
 }
 
@@ -48,7 +50,9 @@ export class PermissionsService extends BaseApiService<Permission> {
   }
 
   getPermissionsByRole(id_rol: number): Observable<Permission[]> {
-    return this.http.get<Permission[]>(`${this.baseUrl}/permissions/rol/${id_rol}`);
+    return this.http.get<unknown>(`${this.baseUrl}/permissions/rol/${id_rol}`).pipe(
+      map(response => extractArray<Permission>(response))
+    );
   }
 }
 
@@ -73,11 +77,11 @@ export class FlocksService extends BaseApiService<Flock> {
     return this.http.post(`${this.baseUrl}/flocks/asignar`, data);
   }
 
-  registerDeadBirds(data: { id_lote: number; cantidad: number; fecha?: string; motivo?: string }): Observable<unknown> {
+  registerDeadBirds(data: { id_lote: string; cantidad: number; fecha?: string; motivo?: string }): Observable<unknown> {
     return this.http.post(`${this.baseUrl}/flocks/aves-muertas`, data);
   }
 
-  finalizeFlock(data: { id_lote: number; fecha_fin?: string; observacion?: string }): Observable<unknown> {
+  finalizeFlock(data: { id_lote: string; fecha_fin?: string; observacion?: string }): Observable<unknown> {
     return this.http.post(`${this.baseUrl}/flocks/finalizar`, data);
   }
 }
@@ -95,19 +99,27 @@ export class EggInventoryService {
   constructor(private http: HttpClient) {}
 
   getAll(): Observable<EggInventory[]> {
-    return this.http.get<EggInventory[]>(`${this.baseUrl}/egg-inventory`);
+    return this.http.get<unknown>(`${this.baseUrl}/egg-inventory`).pipe(
+      map(response => extractArray<EggInventory>(response))
+    );
   }
 
-  getById(id: number): Observable<EggInventory> {
-    return this.http.get<EggInventory>(`${this.baseUrl}/egg-inventory/${id}`);
+  getById(id: string): Observable<EggInventory> {
+    return this.http.get<unknown>(`${this.baseUrl}/egg-inventory/${id}`).pipe(
+      map(response => extractData<EggInventory>(response))
+    );
   }
 
   registerProduction(data: unknown): Observable<EggInventory> {
-    return this.http.post<EggInventory>(`${this.baseUrl}/egg-inventory/produccion`, data);
+    return this.http.post<unknown>(`${this.baseUrl}/egg-inventory/produccion`, data).pipe(
+      map(response => extractData<EggInventory>(response))
+    );
   }
 
   registerDamaged(data: unknown): Observable<EggInventory> {
-    return this.http.post<EggInventory>(`${this.baseUrl}/egg-inventory/danados`, data);
+    return this.http.post<unknown>(`${this.baseUrl}/egg-inventory/danados`, data).pipe(
+      map(response => extractData<EggInventory>(response))
+    );
   }
 }
 
@@ -136,19 +148,27 @@ export class SupplyHistoryService {
   constructor(private http: HttpClient) {}
 
   getAll(): Observable<SupplyHistory[]> {
-    return this.http.get<SupplyHistory[]>(`${this.baseUrl}/supply-history`);
+    return this.http.get<unknown>(`${this.baseUrl}/supply-history`).pipe(
+      map(response => extractArray<SupplyHistory>(response))
+    );
   }
 
-  getById(id: number): Observable<SupplyHistory> {
-    return this.http.get<SupplyHistory>(`${this.baseUrl}/supply-history/${id}`);
+  getById(id: string): Observable<SupplyHistory> {
+    return this.http.get<unknown>(`${this.baseUrl}/supply-history/${id}`).pipe(
+      map(response => extractData<SupplyHistory>(response))
+    );
   }
 
-  getBySupply(idInsumo: number): Observable<SupplyHistory[]> {
-    return this.http.get<SupplyHistory[]>(`${this.baseUrl}/supply-history/by-supply/${idInsumo}`);
+  getBySupply(idInsumo: string): Observable<SupplyHistory[]> {
+    return this.http.get<unknown>(`${this.baseUrl}/supply-history/by-supply/${idInsumo}`).pipe(
+      map(response => extractArray<SupplyHistory>(response))
+    );
   }
 
   create(data: unknown): Observable<SupplyHistory> {
-    return this.http.post<SupplyHistory>(`${this.baseUrl}/supply-history`, data);
+    return this.http.post<unknown>(`${this.baseUrl}/supply-history`, data).pipe(
+      map(response => extractData<SupplyHistory>(response))
+    );
   }
 }
 
@@ -165,15 +185,21 @@ export class FeedingService {
   constructor(private http: HttpClient) {}
 
   getAll(): Observable<Feeding[]> {
-    return this.http.get<Feeding[]>(`${this.baseUrl}/alimentacion`);
+    return this.http.get<unknown>(`${this.baseUrl}/alimentacion`).pipe(
+      map(response => extractArray<Feeding>(response))
+    );
   }
 
   getById(id: number): Observable<Feeding> {
-    return this.http.get<Feeding>(`${this.baseUrl}/alimentacion/${id}`);
+    return this.http.get<unknown>(`${this.baseUrl}/alimentacion/${id}`).pipe(
+      map(response => extractData<Feeding>(response))
+    );
   }
 
   create(data: unknown): Observable<Feeding> {
-    return this.http.post<Feeding>(`${this.baseUrl}/alimentacion`, data);
+    return this.http.post<unknown>(`${this.baseUrl}/alimentacion`, data).pipe(
+      map(response => extractData<Feeding>(response))
+    );
   }
 
   delete(id: number): Observable<void> {
@@ -188,14 +214,20 @@ export class ReportsService {
   constructor(private http: HttpClient) {}
 
   getAll(): Observable<Report[]> {
-    return this.http.get<Report[]>(`${this.baseUrl}/reports`);
+    return this.http.get<unknown>(`${this.baseUrl}/reports`).pipe(
+      map(response => extractArray<Report>(response))
+    );
   }
 
-  getById(id: number): Observable<Report> {
-    return this.http.get<Report>(`${this.baseUrl}/reports/${id}`);
+  getById(id: string): Observable<Report> {
+    return this.http.get<unknown>(`${this.baseUrl}/reports/${id}`).pipe(
+      map(response => extractData<Report>(response))
+    );
   }
 
   create(data: unknown): Observable<Report> {
-    return this.http.post<Report>(`${this.baseUrl}/reports`, data);
+    return this.http.post<unknown>(`${this.baseUrl}/reports`, data).pipe(
+      map(response => extractData<Report>(response))
+    );
   }
 }

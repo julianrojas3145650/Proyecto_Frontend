@@ -13,6 +13,7 @@ import { SupplyActionsService } from '../../../core/services/api.services';
       subtitle="Tipos de acciones que se pueden realizar sobre insumos."
       entityName="Acción"
       icon="fa-tasks"
+      idField="id_accion_historial_movimiento"
       [fields]="fields"
     />
   `,
@@ -21,6 +22,5 @@ export class SupplyActionsComponent {
   service = inject(SupplyActionsService);
   fields: CrudField[] = [
     { key: 'nombre', label: 'Nombre', type: 'text', placeholder: 'Ej: Entrada', required: true },
-    { key: 'descripcion', label: 'Descripción', type: 'textarea', placeholder: 'Descripción...', required: false },
   ];
 }
