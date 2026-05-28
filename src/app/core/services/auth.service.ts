@@ -18,8 +18,10 @@ export class AuthService {
   login(credentials: LoginRequest): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/auth/login`, credentials).pipe(
       tap((response) => {
-        localStorage.setItem(this.TOKEN_KEY, response.access_token);
-        const user = response.usuario || response.user;
+        // El backend envuelve las respuestas en { data: ... } via ResponseInterceptor
+        const body = response.data ?? response;
+        localStorage.setItem(this.TOKEN_KEY, body.access_token);
+        const user = body.usuario || body.user;
         localStorage.setItem(this.USER_KEY, JSON.stringify(user));
         this.currentUser.set(user as AuthProfile);
       }),
